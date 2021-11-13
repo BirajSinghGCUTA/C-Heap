@@ -10,7 +10,7 @@
 
 
 static int atexit_registered = 0;
-static int num_mallocs       = -1;
+static int num_mallocs       = 0;
 static int num_frees         = 0;
 static int num_reuses        = 0;
 static int num_grows         = 0;
@@ -71,7 +71,6 @@ struct _block *heapList = NULL; /* Free list to track the _blocks available */
 struct _block *findFreeBlock(struct _block **last, size_t size) 
 {
    struct _block *curr = heapList;
-
 #if defined FIT && FIT == 0
    /* First fit */
    while (curr && !(curr->free && curr->size >= size)) 
@@ -92,6 +91,9 @@ struct _block *findFreeBlock(struct _block **last, size_t size)
 #if defined NEXT && NEXT == 0
    /** \TODO Implement next fit here */
 #endif
+
+   if(curr != NULL)
+      num_reuses++;
 
    return curr;
 }
@@ -138,6 +140,10 @@ struct _block *growHeap(struct _block *last, size_t size)
    curr->size = size;
    curr->next = NULL;
    curr->free = false;
+   curr->prev = last;
+   num_grows++;
+   num_blocks++;
+   max_heap += size;
    return curr;
 }
 
@@ -193,13 +199,20 @@ void *malloc(size_t size)
          next -> size = size; 
          //Set the next pointer as a new block 
          //-> this should be size + size of block ahead oh the head pointer
-         next -> next = (struct _block*)(BLOCK_HEADER(next) + sizeof(struct _block) + size);
+
+         //Casting Block_header as char pointer so that when 
+         //we increase the pointer using size, it moves 1 byte * size
+         next -> next = (struct _block*)(((char*)BLOCK_HEADER(next))    
+                        + sizeof(struct _block) + (size));
+      
          //set the next's next back to the original pointer
          next -> next -> next = temp_next;
-         //set next block as a free space
+         //set next block as a free space 
          next -> next -> free = 1;
          //set the size of the next block to the remaining size
          next -> next -> size = temp_size - size - sizeof(struct _block);
+         //set the prev pointer for the next block
+         next -> next -> prev = next;
 
          ++num_splits;
          ++num_blocks;
@@ -229,8 +242,24 @@ void *malloc(size_t size)
    return BLOCK_DATA(next);
 }
 
+/*This function cobines two consecutive forward blocks*/
+struct _block* combineblocksNxt(struct _block* curr){
+
+   //the new size will be the current blocks size + size of next block
+   //+ the size of struck of the block we get rid of.
+   curr -> size = curr -> size +  curr->next->size + sizeof(struct _block);
+   //Attach the pointers.
+   curr -> next = curr -> next -> next;
+
+   //Deal with Counters.
+   num_blocks--;
+   num_coalesces++;
+
+   return curr;
+}
+
 /*
- * \brief free
+ * \brief free 
  *
  * frees the memory _block pointed to by pointer. if the _block is adjacent
  * to another _block then coalesces (combines) them
@@ -252,7 +281,24 @@ void free(void *ptr)
    curr->free = true;
    num_frees++;
 
-   /* TODO: Coalesce free _blocks if needed */
+
+   //Utilizing Doubly linked list to colace the blocks
+   
+   //check to see if prev block exists and is free
+   if(curr->next && curr->next->free == 1)
+   {
+      //if free combine with the currblock
+      curr = combineblocksNxt(curr);
+   }
+   //check to see if prev block exists and is free
+   if(curr->prev != NULL && curr->prev->free == 1)
+   {
+      //if free combine with the currblock with 
+      //head pointer as prevblock's pointer
+      curr = combineblocksNxt(curr->prev);
+   }
 }
+
+
 /* 7f704d5f-9811-4b91-a918-57c1bb646b70       --------------------------------*/
 /* vim: set expandtab sts=3 sw=3 ts=6 ft=cpp: --------------------------------*/
