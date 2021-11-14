@@ -4,7 +4,9 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <limits.h>
+#include <string.h>
 
+#define FIT 0
 #define ALIGN4(s)         (((((s) - 1) >> 2) << 2) + 4)
 #define BLOCK_DATA(b)      ((b) + 1)
 #define BLOCK_HEADER(ptr)   ((struct _block *)(ptr) - 1)
@@ -84,43 +86,61 @@ struct _block *findFreeBlock(struct _block **last, size_t size)
 
 #if defined BEST && BEST == 0
    /* Best fit */
+   //keep track of best fitting block
    struct _block *bestfit = NULL;
+   //keep track of least space wasted
    size_t LestSpace = (size_t) INT_MAX; 
 
+   //run through the entire heap list
    while (curr) 
    {
+      //if suitable block found
       if(curr->free && (curr->size >= size))
       {
+         //check to see if it wasts less space than the 
+         //least space
          if((curr -> size - size) < LestSpace)
          {
+            //Update the best fitting block
             bestfit = curr;
+            //Update of the least space wasted 
             LestSpace = (curr -> size - size);
          }
       }
+      //move the pointer
       curr  = curr->next;
    }
-
+   //returning curr 
    curr = bestfit;
 #endif
 
 #if defined WORST && WORST == 0
    /* worst fit */
+   //keep track of worst fitting block
    struct _block *worstfit = NULL;
+   //keep track of most space wasted
    size_t MostSpace = 0; 
 
+   //run through the entire heap list
    while (curr) 
    {
+      //if suitable block found
       if(curr->free && (curr->size >= size))
       {
+         //check to see if it wasts more space than the 
+         //mostspace
          if((curr -> size - size) > MostSpace)
          {
+            //Update the worst fitting block
             worstfit = curr;
+            //Update of the most space wasted 
             MostSpace = curr -> size - size;
          }
       }
+      //move the pointer
       curr  = curr->next;
    }
-
+   //returning curr
    curr = worstfit;
 #endif
 
@@ -227,6 +247,22 @@ struct _block *growHeap(struct _block *last, size_t size)
    max_heap += size;
    return curr;
 }
+/*This function cobines two consecutive forward blocks*/
+struct _block* combineblocksNxt(struct _block* curr){
+
+   //the new size will be the current blocks size + size of next block
+   //+ the size of struck of the block we get rid of.
+   curr -> size = curr -> size +  curr->next->size + sizeof(struct _block);
+   //Attach the pointers.
+   curr -> next = curr -> next -> next;
+
+   //Deal with Counters.
+   num_blocks--;
+   num_coalesces++;
+
+   return curr;
+}
+
 
 /*
  * \brief malloc
@@ -323,20 +359,143 @@ void *malloc(size_t size)
    return BLOCK_DATA(next);
 }
 
-/*This function cobines two consecutive forward blocks*/
-struct _block* combineblocksNxt(struct _block* curr){
 
-   //the new size will be the current blocks size + size of next block
-   //+ the size of struck of the block we get rid of.
-   curr -> size = curr -> size +  curr->next->size + sizeof(struct _block);
-   //Attach the pointers.
-   curr -> next = curr -> next -> next;
+/*
+ * \brief calloc
+ *
+ * finds a free _block of heap memory for the calling process.
+ * if there is no free _block that satisfies the request then grows the 
+ * heap and returns a new _block
+ *
+ * \param size size of the requested memory in bytes
+ *
+ * \return returns the requested memory allocation to the calling process 
+ * or NULL if failed
+ */
 
-   //Deal with Counters.
-   num_blocks--;
-   num_coalesces++;
+void *calloc(size_t nmemb, size_t size){
 
-   return curr;
+   //returns BLOCKdata of next
+   struct _block *next = malloc(nmemb*size);
+   //set all the old data into 0
+   memset(next,0,next->size);
+   //return next
+   return next;
+} 
+
+ /*
+ * \brief realloc
+ *
+ * free the _block of heap memory given for the calling process.
+ * if there is no free _block that satisfies the request then grows the 
+ * heap and returns a new _block
+ *
+ * \param size size of the requested memory in bytes
+ *
+ * \return returns the requested memory allocation to the calling process 
+ * or NULL if failed
+ */
+
+void *realloc(void *ptr, size_t size)
+{
+   //check to see if given pointer and size is valid 
+   if(ptr == NULL || size == 0)
+   {
+      return malloc(size);
+   }
+   //while reallocating user provides pointer to block data
+   //convert it to block header.
+   struct _block *curr = BLOCK_HEADER(ptr);
+
+   //check to see if the given block is enough to fit 
+   //the requested size;
+   if(curr->size > size)
+   {
+      memset(BLOCK_DATA(curr), 0, curr->size);
+      //Save the pointer to the next node 
+      
+      struct _block* temp_next = curr -> next;
+      //Save the original size of returned block 
+      size_t temp_size = curr -> size;
+
+      //Attach the new size onto the block
+      curr -> size = size; 
+      //Set the next pointer as a new block 
+      //-> this should be size + size of block ahead oh the head pointer
+
+      //Casting Block_header as char pointer so that when 
+      //we increase the pointer using size, it moves 1 byte * size
+      curr -> next = (struct _block*)(((char*)BLOCK_HEADER(curr))    
+                     + sizeof(struct _block) + (size));
+   
+      //set the next's next back to the original pointer
+      curr -> next -> next = temp_next;
+      //set next block as a free space 
+      curr -> next -> free = 1;
+      //set the size of the next block to the remaining size
+      curr -> next -> size = temp_size - size - sizeof(struct _block);
+      //set the prev pointer for the next block
+      curr -> next -> prev = curr;
+      
+      return BLOCK_DATA(curr);
+   }
+   else{
+      //check to see if the memory is expandable
+      if(curr-> next && curr->next->free && ((curr->next->size + curr->size) > size ))
+         {
+            //setting the data into 0 before reallocating it
+            //this avoids issues for programmers.
+            //memset(BLOCK_DATA(curr), 0, curr->size);
+            //Comibining blocks
+            curr = combineblocksNxt(curr);
+
+               
+            //Save the pointer to the next node 
+            struct _block* temp_next = curr -> next;
+            //Save the original size of returned block 
+            size_t temp_size = curr -> size;
+
+            //Attach the new size onto the block
+            curr -> size = size; 
+            //Set the next pointer as a new block 
+            //-> this should be size + size of block ahead oh the head pointer
+
+            //Casting Block_header as char pointer so that when 
+            //we increase the pointer using size, it moves 1 byte * size
+            curr -> next = (struct _block*)(((char*)BLOCK_HEADER(curr))    
+                           + sizeof(struct _block) + (size));
+         
+            //set the next's next back to the original pointer
+            curr -> next -> next = temp_next;
+            //set next block as a free space 
+            curr -> next -> free = 1;
+            //set the size of the next block to the remaining size
+            curr -> next -> size = temp_size - size - sizeof(struct _block);
+            //set the prev pointer for the next block
+            curr -> next -> prev = curr;
+
+            ++num_splits;
+            ++num_blocks; 
+            
+            return BLOCK_DATA(curr);
+         }
+      else if(curr -> next == NULL)
+      {
+         growHeap(curr, size - curr->size);
+         num_requested += (size - curr->size);
+         combineblocksNxt(curr);
+         curr -> free = false;
+         return BLOCK_DATA(curr);
+      }
+      else
+      {
+         //this means that reacllocation failed
+         //free the block and allocate using malloc
+         //using ptr cause  block header is set in free 
+         free(ptr);
+         return malloc(size);
+      }
+   }
 }
 
 /*
@@ -358,6 +517,7 @@ void free(void *ptr)
 
    /* Make _block as free */
    struct _block *curr = BLOCK_HEADER(ptr);
+   memset(BLOCK_DATA(curr), 0, curr->size);
    assert(curr->free == 0);
    curr->free = true;
    num_frees++;
