@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <limits.h>
 
 #define ALIGN4(s)         (((((s) - 1) >> 2) << 2) + 4)
 #define BLOCK_DATA(b)      ((b) + 1)
@@ -55,7 +56,7 @@ struct _block
 
 
 struct _block *heapList = NULL; /* Free list to track the _blocks available */
-
+struct _block *savePtr;
 /*
  * \brief findFreeBlock
  *
@@ -71,6 +72,7 @@ struct _block *heapList = NULL; /* Free list to track the _blocks available */
 struct _block *findFreeBlock(struct _block **last, size_t size) 
 {
    struct _block *curr = heapList;
+
 #if defined FIT && FIT == 0
    /* First fit */
    while (curr && !(curr->free && curr->size >= size)) 
@@ -82,18 +84,97 @@ struct _block *findFreeBlock(struct _block **last, size_t size)
 
 #if defined BEST && BEST == 0
    /* Best fit */
+   struct _block *bestfit = NULL;
+   size_t LestSpace = (size_t) INT_MAX; 
+
+   while (curr) 
+   {
+      if(curr->free && (curr->size >= size))
+      {
+         if((curr -> size - size) < LestSpace)
+         {
+            bestfit = curr;
+            LestSpace = (curr -> size - size);
+         }
+      }
+      curr  = curr->next;
+   }
+
+   curr = bestfit;
 #endif
 
 #if defined WORST && WORST == 0
-   /** \TODO Implement worst fit here */
+   /* worst fit */
+   struct _block *worstfit = NULL;
+   size_t MostSpace = 0; 
+
+   while (curr) 
+   {
+      if(curr->free && (curr->size >= size))
+      {
+         if((curr -> size - size) > MostSpace)
+         {
+            worstfit = curr;
+            MostSpace = curr -> size - size;
+         }
+      }
+      curr  = curr->next;
+   }
+
+   curr = worstfit;
 #endif
 
 #if defined NEXT && NEXT == 0
-   /** \TODO Implement next fit here */
+   /*Next Fit */
+   
+   //Check to see if there exists a leftoff location
+   if(savePtr != NULL)
+   {
+      //start from left off location
+      curr = savePtr;
+   }
+
+   //loop though the linked list unless it ends or
+   //finds a correct block
+   while (curr && !(curr->free && curr->size >= size)) 
+   {
+      //Update the last(its passed as reference)
+      *last = curr;
+      //Move pointer forward.
+      curr  = curr->next;
+   }
+
+   //if curr comes out as NULL that means no space found and 
+   //checking to see if savePtr is NULL to make sure we dont 
+   //Rerun through the entire list again
+   if(curr == NULL && savePtr != NULL )
+   {
+      //Restart the search at the begining of the head
+      curr = heapList;
+      //Search until savePtr(To make sure not to rerun through the loop)
+      while(curr != savePtr && !(curr->free && curr->size >= size))
+      {
+         *last =curr;
+         curr = curr -> next;
+      }
+      //if curr ends up as saveptr, no memory was found.
+      //need to grow heap
+      if(curr == savePtr)
+      {
+         return NULL;
+      }
+
+   }
+   savePtr = curr;
+
 #endif
 
+   //if the function return not NULL, 
+   //a block has been reused.
    if(curr != NULL)
+   {
       num_reuses++;
+   }
 
    return curr;
 }
