@@ -67,9 +67,6 @@ struct _block *savePtr;
  *
  * \return a _block that fits the request or NULL if no free _block matches
  *
- * \TODO Implement Next Fit
- * \TODO Implement Best Fit
- * \TODO Implement Worst Fit
  */
 struct _block *findFreeBlock(struct _block **last, size_t size) 
 {
@@ -247,7 +244,12 @@ struct _block *growHeap(struct _block *last, size_t size)
    max_heap += size;
    return curr;
 }
-/*This function cobines two consecutive forward blocks*/
+
+/*brief combineblocksNxt
+* combines two consecutive forward blocks
+* parameters curr block to combine with blocks next block
+*
+*/
 struct _block* combineblocksNxt(struct _block* curr){
 
    //the new size will be the current blocks size + size of next block
