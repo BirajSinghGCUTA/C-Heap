@@ -329,8 +329,7 @@ void *malloc(size_t size)
          //set the prev pointer for the next block
          next -> next -> prev = next;
          //free the pointer
-         free(next->next);
-
+         next->next->free = 1;
          ++num_splits;
          ++num_blocks;
       }
@@ -544,7 +543,6 @@ void free(void *ptr)
 
    /* Make _block as free */
    struct _block *curr = BLOCK_HEADER(ptr);
-   //memset(BLOCK_DATA(curr), 0, curr->size);
    assert(curr->free == 0);
    curr->free = true;
    num_frees++;
