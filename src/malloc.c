@@ -324,12 +324,12 @@ void *malloc(size_t size)
       
          //set the next's next back to the original pointer
          next -> next -> next = temp_next;
-         //set next block as a free space 
-         next -> next -> free = 1;
          //set the size of the next block to the remaining size
          next -> next -> size = temp_size - size - sizeof(struct _block);
          //set the prev pointer for the next block
          next -> next -> prev = next;
+         //free the pointer
+         free(next->next);
 
          ++num_splits;
          ++num_blocks;
@@ -367,7 +367,7 @@ void *malloc(size_t size)
  * if there is no free _block that satisfies the request then grows the 
  * heap and returns a new _block
  *
- * \param size size of the requested memory in bytes
+ * \param size size of the requested memory in bytes, nmemb number of sizes.
  *
  * \return returns the requested memory allocation to the calling process 
  * or NULL if failed
@@ -386,11 +386,12 @@ void *calloc(size_t nmemb, size_t size){
  /*
  * \brief realloc
  *
- * free the _block of heap memory given for the calling process.
+ * finds the _block of heap memory given for the calling process.
+ * Shrinks the _block of heap memory given for the calling process.
  * if there is no free _block that satisfies the request then grows the 
  * heap and returns a new _block
  *
- * \param size size of the requested memory in bytes
+ * \param size size of the requested memory in bytes, pte pointer to initial malloc
  *
  * \return returns the requested memory allocation to the calling process 
  * or NULL if failed
@@ -411,45 +412,59 @@ void *realloc(void *ptr, size_t size)
    //the requested size;
    if(curr->size > size)
    {
-      memset(BLOCK_DATA(curr), 0, curr->size);
-      //Save the pointer to the next node 
-      
-      struct _block* temp_next = curr -> next;
-      //Save the original size of returned block 
-      size_t temp_size = curr -> size;
+      //if user calls for reallocating to pointer
+      //to decreashrinkse the memory size.
+      if(curr->size > (size + sizeof(struct _block)))
+      {
+         
+         struct _block* temp_next = curr -> next;
+         //Save the original size of returned block 
+         size_t temp_size = curr -> size;
 
-      //Attach the new size onto the block
-      curr -> size = size; 
-      //Set the next pointer as a new block 
-      //-> this should be size + size of block ahead oh the head pointer
-
-      //Casting Block_header as char pointer so that when 
-      //we increase the pointer using size, it moves 1 byte * size
-      curr -> next = (struct _block*)(((char*)BLOCK_HEADER(curr))    
-                     + sizeof(struct _block) + (size));
-   
-      //set the next's next back to the original pointer
-      curr -> next -> next = temp_next;
-      //set next block as a free space 
-      curr -> next -> free = 1;
-      //set the size of the next block to the remaining size
-      curr -> next -> size = temp_size - size - sizeof(struct _block);
-      //set the prev pointer for the next block
-      curr -> next -> prev = curr;
-      
-      return BLOCK_DATA(curr);
+         //Attach the new size onto the block
+         curr -> size = size; 
+         //Set the next pointer as a new block 
+         //-> this should be size + size of block ahead oh the head pointer
+         
+         //Casting Block_header as char pointer so that when 
+         //we increase the pointer using size, it moves 1 byte * size
+         curr -> next = (struct _block*)(((char*)(curr))     // REQUIRES FIX
+                        + sizeof(struct _block) + (size));
+         
+         //set the next's next back to the original pointer
+         curr -> next -> next = temp_next;
+         //set the size of the next block to the remaining size
+         curr -> next -> size = temp_size - size - sizeof(struct _block);
+         
+         //set the prev pointer for the next block
+         curr -> next -> prev = curr;
+         //free the pointer
+         curr -> next -> free = true;
+         
+         
+         ++num_splits;
+         ++num_blocks; 
+         return BLOCK_DATA(curr);
+      }
+      else
+      {
+         return BLOCK_DATA(curr);
+      }
    }
-   else{
+   else
+   {
       //check to see if the memory is expandable
       if(curr-> next && curr->next->free && ((curr->next->size + curr->size) > size ))
+      {
+         //setting the data into 0 before reallocating it
+         //this avoids issues for programmers.
+         //memset(BLOCK_DATA(curr), 0, curr->size);
+         //Comibining blocks
+         curr = combineblocksNxt(curr);
+         
+         if(curr->size > size + sizeof(struct _block))
          {
-            //setting the data into 0 before reallocating it
-            //this avoids issues for programmers.
-            //memset(BLOCK_DATA(curr), 0, curr->size);
-            //Comibining blocks
-            curr = combineblocksNxt(curr);
 
-               
             //Save the pointer to the next node 
             struct _block* temp_next = curr -> next;
             //Save the original size of returned block 
@@ -459,41 +474,53 @@ void *realloc(void *ptr, size_t size)
             curr -> size = size; 
             //Set the next pointer as a new block 
             //-> this should be size + size of block ahead oh the head pointer
-
+            
             //Casting Block_header as char pointer so that when 
             //we increase the pointer using size, it moves 1 byte * size
-            curr -> next = (struct _block*)(((char*)BLOCK_HEADER(curr))    
+            curr -> next = (struct _block*)(((char*)(curr))    
                            + sizeof(struct _block) + (size));
-         
+            
             //set the next's next back to the original pointer
             curr -> next -> next = temp_next;
-            //set next block as a free space 
-            curr -> next -> free = 1;
             //set the size of the next block to the remaining size
             curr -> next -> size = temp_size - size - sizeof(struct _block);
             //set the prev pointer for the next block
             curr -> next -> prev = curr;
+            //free the pointer
+            curr -> next -> free = true;
 
             ++num_splits;
             ++num_blocks; 
             
             return BLOCK_DATA(curr);
          }
+         else
+         {
+            return BLOCK_DATA(curr);            
+         }
+      }
       else if(curr -> next == NULL)
       {
+         //this means that realloc needs to grow heap
          growHeap(curr, size - curr->size);
+         //increase the requested memory
          num_requested += (size - curr->size);
+         //combine the new block
          combineblocksNxt(curr);
+         //set the block as taken
          curr -> free = false;
          return BLOCK_DATA(curr);
       }
       else
       {
          //this means that reacllocation failed
-         //free the block and allocate using malloc
+         //allocate new chunk of memory using malloc
+         struct _block* newblock =  malloc(size);
+         //copy the data onto new block
+         memcpy(BLOCK_DATA(newblock),ptr,curr->size);
          //using ptr cause  block header is set in free 
          free(ptr);
-         return malloc(size);
+         return BLOCK_DATA(newblock);
       }
    }
 }
@@ -517,7 +544,7 @@ void free(void *ptr)
 
    /* Make _block as free */
    struct _block *curr = BLOCK_HEADER(ptr);
-   memset(BLOCK_DATA(curr), 0, curr->size);
+   //memset(BLOCK_DATA(curr), 0, curr->size);
    assert(curr->free == 0);
    curr->free = true;
    num_frees++;
