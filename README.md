@@ -69,72 +69,60 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-[![Product Name Screen Shot][product-screenshot]](https://example.com)
+In C, the library function malloc is used to allocate a block of memory on the heap. The program accesses this block of memory via a pointer that malloc returns. When the memory is no longer needed, the pointer is passed to free which deallocates the memory so that it can be used for other purposes.
 
-There are many great README templates available on GitHub; however, I didn't find one that really suited my needs so I created this enhanced one. I want to create a README template so amazing that it'll be the last one you ever need -- I think this is it.
-
-Here's why:
-* Your time should be focused on creating something amazing. A project that solves a problem and helps others
-* You shouldn't be doing the same tasks over and over like creating a README from scratch
-* You should implement DRY principles to the rest of your life :smile:
-
-Of course, no one template will serve all projects since your needs may be different. So I'll be adding more in the near future. You may also suggest changes by forking this repo and creating a pull request or opening an issue. Thanks to all the people have contributed to expanding this template!
-
-Use the `BLANK_README.md` to get started.
+This is a basic implementation of Heap Management Library:
+* This library that interacts with the OS to perform heap management on behalf of a user process 
+* Implements the best-fit, worst-fit, next-fit, and first-fit memory allocation algorithms to locate free memory in the heap
+* Allows users to efficiently use malloc, calloc, realloc, and free functions by created by utilizing doubly linked memory blocks
 
 <p align="right">(<a href="#top">back to top</a>)</p>
-
-
 
 ### Built With
 
-This section should list any major frameworks/libraries used to bootstrap your project. Leave any add-ons/plugins for the acknowledgements section. Here are a few examples.
-
-* [Next.js](https://nextjs.org/)
-* [React.js](https://reactjs.org/)
-* [Vue.js](https://vuejs.org/)
-* [Angular](https://angular.io/)
-* [Svelte](https://svelte.dev/)
-* [Laravel](https://laravel.com)
-* [Bootstrap](https://getbootstrap.com)
-* [JQuery](https://jquery.com)
+* [C]
+* [C++]
+* [Makefile]
 
 <p align="right">(<a href="#top">back to top</a>)</p>
-
 
 
 <!-- GETTING STARTED -->
 ## Getting Started
 
-This is an example of how you may give instructions on setting up your project locally.
-To get a local copy up and running follow these simple example steps.
+This library has been tested in a Linux OS, I recommend using Linux(RedHat or Ubuntu) while using this program. 
 
 ### Prerequisites
 
-This is an example of how to list things you need to use the software and how to install them.
-* npm
+To run C++ or C, first install gcc compilers 
+* buid-essential
   ```sh
-  npm install npm@latest -g
+  sudo apt install build-essential
+  ```
+* install manpage 
+  ```sh
+  sudo apt-get install manpages-dev
   ```
 
 ### Installation
 
-_Below is an example of how you can instruct your audience on installing and setting up your app. This template doesn't rely on any external dependencies or services._
+The code compiles into four shared libraries and four test programs.  To build the code, change to your top level assignment directory and type: 
 
-1. Get a free API Key at [https://example.com](https://example.com)
-2. Clone the repo
+1. use make file to build
    ```sh
-   git clone https://github.com/your_username_/Project-Name.git
+   make
    ```
-3. Install NPM packages
+2. Once you have the library, you can use it to override the existing malloc by using LD_PRELOAD: 
    ```sh
-   npm install
+   $ env LD_PRELOAD=lib/libmalloc-ff.so tests/test1 
    ```
-4. Enter your API in `config.js`
-   ```js
-   const API_KEY = 'ENTER YOUR API';
+3. To run the other heap management schemes replace libmalloc-ff.so with the appropriate library: 
+   ```sh
+   Best-Fit:  libmalloc-bf.so  
+   First-Fit: libmalloc-ff.so   
+   Next-Fit:  libmalloc-nf.so  
+   Worst-Fit: libmalloc-wf.so 
    ```
-
 <p align="right">(<a href="#top">back to top</a>)</p>
 
 
