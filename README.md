@@ -208,7 +208,7 @@ Project Link: [https://github.com/BirajSinghGCUTA/C-Heap](https://github.com/Bir
 <!-- ACKNOWLEDGMENTS -->
 ## Acknowledgments
 
-**PROF Trevor J. Bakker
+#PROF. Trevor J. Bakker
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
