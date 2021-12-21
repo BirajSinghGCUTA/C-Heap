@@ -128,11 +128,27 @@ The code compiles into four shared libraries and four test programs.  To build t
 
 
 <!-- USAGE EXAMPLES -->
-## Usage
+## Usage Examples
 
-Use this space to show useful examples of how a project can be used. Additional screenshots, code examples and demos work well in this space. You may also link to more resources.
+1. To use malloc
+ ```c
+    int *p1 = malloc(4*sizeof(int));
+   ```
+2. To use calloc
+ ```c
+    int *p1 = calloc(4, sizeof(int));
+   ```
+3. To use relloc
+ ```c
+    int *p1 = realloc(7*sizeof(int));
+   ```
+4. To use free
+ ```c
+    malloc(p1);
+   ```
 
-_For more examples, please refer to the [Documentation](https://example.com)_
+ 
+Please refer to the [Documentation](https://example.com)_
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
@@ -141,15 +157,11 @@ _For more examples, please refer to the [Documentation](https://example.com)_
 <!-- ROADMAP -->
 ## Roadmap
 
-- [x] Add Changelog
-- [x] Add back to top links
-- [] Add Additional Templates w/ Examples
-- [] Add "components" document to easily copy & paste sections of the readme
-- [] Multi-language Support
-    - [] Chinese
-    - [] Spanish
-
-See the [open issues](https://github.com/othneildrew/Best-README-Template/issues) for a full list of proposed features (and known issues).
+- [x] Implement splitting and coalescing of free blocks. If two free blocks are adjacent then combine them. If a free block is larger           than the requested size then split the block into two. 
+- [x] Implement three additional heap management strategies: Next Fit, Worst Fit, Best Fit, First Fit. 
+- [x] Implement realloc and calloc. 
+- [X] Allow realloc to decrease the allocation size.
+- [X] Make the memory blocks doubly linked and use it for fast memory search and free
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
@@ -185,9 +197,9 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 <!-- CONTACT -->
 ## Contact
 
-Your Name - [@your_twitter](https://twitter.com/your_username) - email@example.com
+Biraj Singh GC- [@birajsinghgc@gmail.com](birajsinghgc@gmail.com)
 
-Project Link: [https://github.com/your_username/repo_name](https://github.com/your_username/repo_name)
+Project Link: [https://github.com/BirajSinghGCUTA/C-Heap](https://github.com/BirajSinghGCUTA/C-Heap)
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
@@ -196,16 +208,7 @@ Project Link: [https://github.com/your_username/repo_name](https://github.com/yo
 <!-- ACKNOWLEDGMENTS -->
 ## Acknowledgments
 
-Use this space to list resources you find helpful and would like to give credit to. I've included a few of my favorites to kick things off!
-
-* [Choose an Open Source License](https://choosealicense.com)
-* [GitHub Emoji Cheat Sheet](https://www.webpagefx.com/tools/emoji-cheat-sheet)
-* [Malven's Flexbox Cheatsheet](https://flexbox.malven.co/)
-* [Malven's Grid Cheatsheet](https://grid.malven.co/)
-* [Img Shields](https://shields.io)
-* [GitHub Pages](https://pages.github.com)
-* [Font Awesome](https://fontawesome.com)
-* [React Icons](https://react-icons.github.io/react-icons/search)
+**PROF Trevor J. Bakker
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
